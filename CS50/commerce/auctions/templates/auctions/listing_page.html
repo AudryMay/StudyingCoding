@@ -1,0 +1,110 @@
+{% extends "auctions/layout.html" %}
+{% load static %}
+{% block body %}
+    <div class="mx-3">
+        {% if listing.image_url %}
+            <img class="card-img-top" src={{ listing.image_url }} alt="{{ listing.title }}">
+        {% else %}
+            <img class="card-img-top"
+                 src="{% static 'auctions/media/default.jpg' %}"
+                 alt="Card image cap"
+                 >
+        {% endif %}
+        <h2>{{ listing.title }}</h2>
+        {% if user.is_authenticated %}
+            <form action="{% url 'watch_listing' %}" method="post">
+                {% csrf_token %}
+                <div class="form-group">
+                    <input type="hidden" id="listing_id" name="listing_id" value={{ listing.id }}>
+                    {% if user in listing.usersWatching.all %}
+                        <input class="btn btn-primary" type="submit" value="Stop Watching">
+                    {% else %}
+                        <input class="btn btn-primary" type="submit" value="Start Watching">
+                    {% endif %}
+                </div>
+            </form>
+            <hr>
+            {% if user == listing.owner %}
+                <form action="{% url 'end_listing' %}" method="post">
+                    {% csrf_token %}
+                    <div class="form-group">
+                        <input type="hidden" id="listing_id" name="listing_id" value={{ listing.id }}>
+                        <input class="btn btn-primary" type="submit" value="End Listing">
+                    </div>
+                </form>
+                <hr>
+            {% endif %}
+        {% endif %}
+        <hr>
+        {{ listing.description }}
+        <hr>
+        <h5>Total number of bids ({{ listing.bids.count }})</h5>
+        {% if listing.bids is None %}
+            <h2>Price: ${{ listing.starting_bid | floatformat:2 }}</h2>
+        {% else %}
+            <h2>Price: ${{ listing.bids.first.bid | floatformat:2 }}</h2>
+        {% endif %}
+        {% comment %} Error message for bidding {% endcomment %}
+        {% if user.is_authenticated %}
+            {% for message in messages %}<div class="alert alert-danger" role="alert">{{ message }}</div>{% endfor %}
+            {% if listing.is_active %}
+                <form action="{% url 'create_bid' %}" method="post">
+                    {% csrf_token %}
+                    <div class="form-group">
+                        <input type="hidden" id="listing_id" name="listing_id" value={{ listing.id }}>
+                        <input autofocus
+                               class="form-control"
+                               type="number"
+                               name="new_bid"
+                               id="new_bid"
+                               step=".01"
+                               value="0.00">
+                    </div>
+                    <input class="btn btn-primary" type="submit" value="Create New Bid">
+                </form>
+            {% else %}
+                {% if user == listing.bids.first.bidder %}
+                    <h2>Congratulations! You won the auction for ${{ listing.bids.first.bid | floatformat:2 }}</h2>
+                {% else %}
+                    <h2>Auction is close</h2>
+                {% endif %}
+            {% endif %}
+        {% endif %}
+        <hr>
+        <h2>Comments Section</h2>
+        {% if user.is_authenticated %}
+            <form action="{% url 'create_comment' %}" method="post">
+                {% csrf_token %}
+                <div class="form-group">
+                    <div class="mb-2 w-75">
+                        <label for="create_comment">Create Comment</label>
+                        <textarea class="form-control"
+                                  id="comment"
+                                  name="comment"
+                                  rows="3"
+                                  placeholder="enter comment"></textarea>
+                    </div>
+                    <input class="btn btn-primary" type="submit" value="Create Comment">
+                </div>
+            </form>
+            <hr>
+        {% endif %}
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                {% for comment in listing.comments.all %}
+                    <div class="card my-3">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h6 class="text-primary fw-bold mb-0">{{ comment.commentor }}</h6>
+                                <p class="mb-0">{{ comment.date }}</p>
+                            </div>
+                            <p class="card-text">{{ comment.comment }}</p>
+                        </div>
+                    </div>
+                {% empty %}
+                    No comments
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+{% endblock %}
